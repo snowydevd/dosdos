@@ -1,0 +1,215 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // directUrl se usa para migraciones (bypasea el connection pooler de Supabase)
+  directUrl = env("DIRECT_URL")
+}
+
+// ────────────────────────────────────────────
+// USUARIO — espeja auth.users de Supabase
+// ────────────────────────────────────────────
+model User {
+  id              String   @id // = auth.users.id (UUID de Supabase)
+  email           String   @unique
+  nombre          String
+  fechaNacimiento DateTime
+  genero          Gender
+  bio             String?  @db.VarChar(300)
+  ciudad          String
+  fotos           Photo[]
+
+  // Un usuario puede ser parte de UN dúo activo a la vez
+  duoMembership DuoMember?
+
+  // Invitaciones de dúo enviadas/recibidas
+  invitacionesEnviadas  DuoInvitation[] @relation("Inviter")
+  invitacionesRecibidas DuoInvitation[] @relation("Invitee")
+
+  // Swipes individuales (el match dúo requiere que AMBOS miembros voten RIGHT)
+  swipes   Swipe[]
+  mensajes Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Photo {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url       String
+  // Orden de 1 a N; las primeras 2 son obligatorias para completar el perfil
+  orden     Int
+  createdAt DateTime @default(now())
+
+  @@map("photos")
+}
+
+// ────────────────────────────────────────────
+// DÚO — la unidad de matching de DosDos
+// Un dúo = exactamente 2 usuarios confirmados
+// ────────────────────────────────────────────
+model Duo {
+  id String @id @default(cuid())
+
+  // Exactamente 2 miembros confirmados; esta invariante se mantiene en la app
+  miembros DuoMember[]
+
+  // Bio conjunta del dúo (qué buscan, vibe, etc.)
+  bioConjunta String? @db.VarChar(500)
+
+  // Si activo=false el dúo se "disolvió" y los usuarios pueden formar uno nuevo
+  activo Boolean @default(true)
+
+  // Swipes donde este dúo fue el que swipeó (acumulados de sus 2 miembros)
+  swipesRealizados Swipe[]
+
+  // El dúo puede aparecer como parte A o B de un match
+  matchesComoA Match[] @relation("DuoA")
+  matchesComoB Match[] @relation("DuoB")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("duos")
+}
+
+// Tabla de unión User ↔ Duo
+model DuoMember {
+  id     String  @id @default(cuid())
+  duoId  String
+  duo    Duo     @relation(fields: [duoId], references: [id], onDelete: Cascade)
+  userId String  @unique // un usuario en UN dúo a la vez
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rol    DuoRole @default(MEMBER)
+
+  createdAt DateTime @default(now())
+
+  @@unique([duoId, userId])
+  @@map("duo_members")
+}
+
+// Invitación para armar un dúo entre dos usuarios
+model DuoInvitation {
+  id        String @id @default(cuid())
+  inviterId String
+  inviter   User   @relation("Inviter", fields: [inviterId], references: [id])
+  inviteeId String
+  invitee   User   @relation("Invitee", fields: [inviteeId], references: [id])
+
+  estado      InvitationStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  respondedAt DateTime?
+
+  @@map("duo_invitations")
+}
+
+// ────────────────────────────────────────────
+// SWIPE — voto individual de un usuario
+// El "like de dúo" se consolida cuando AMBOS miembros
+// votaron RIGHT al mismo targetDuo
+// ────────────────────────────────────────────
+model Swipe {
+  id String @id @default(cuid())
+
+  // Quién swipeó (usuario individual)
+  swiperUserId String
+  swiperUser   User   @relation(fields: [swiperUserId], references: [id])
+
+  // El dúo al que pertenece el swiper (snapshot del momento)
+  swiperDuoId String
+  swiperDuo   Duo    @relation(fields: [swiperDuoId], references: [id])
+
+  // El dúo objetivo
+  targetDuoId String
+
+  direccion SwipeDirection
+
+  createdAt DateTime @default(now())
+
+  // Cada usuario solo puede swipear una vez a cada dúo objetivo
+  @@unique([swiperUserId, targetDuoId])
+  @@map("swipes")
+}
+
+// ────────────────────────────────────────────
+// MATCH — cuando ambos dúos se dieron RIGHT mutuamente
+// ────────────────────────────────────────────
+model Match {
+  id     String @id @default(cuid())
+  duoAId String
+  duoA   Duo    @relation("DuoA", fields: [duoAId], references: [id])
+  duoBId String
+  duoB   Duo    @relation("DuoB", fields: [duoBId], references: [id])
+
+  // El chat grupal de 4 se crea junto con el match
+  chat Chat?
+
+  createdAt DateTime @default(now())
+
+  // Un dúo-A solo puede matchear una vez con el mismo dúo-B
+  @@unique([duoAId, duoBId])
+  @@map("matches")
+}
+
+// Chat grupal de 4 personas (los 2 miembros de cada dúo)
+model Chat {
+  id      String    @id @default(cuid())
+  matchId String    @unique
+  match   Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  mensajes Message[]
+
+  createdAt DateTime @default(now())
+
+  @@map("chats")
+}
+
+model Message {
+  id       String @id @default(cuid())
+  chatId   String
+  chat     Chat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  senderId String
+  sender   User   @relation(fields: [senderId], references: [id])
+
+  contenido String  @db.Text
+
+  // Array de userIds que ya leyeron el mensaje
+  leidoPor String[]
+
+  createdAt DateTime @default(now())
+
+  @@map("messages")
+}
+
+// ────────────────────────────────────────────
+// ENUMS
+// ────────────────────────────────────────────
+enum Gender {
+  HOMBRE
+  MUJER
+  NO_BINARIO
+  OTRO
+}
+
+enum DuoRole {
+  CREATOR
+  MEMBER
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+enum SwipeDirection {
+  LEFT
+  RIGHT
+}

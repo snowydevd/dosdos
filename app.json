@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "DosDos",
+    "slug": "dosdos",
+    "scheme": "dosdos",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FF6B47"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "app.dosdos.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FF6B47"
+      },
+      "package": "app.dosdos.mobile"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "DosDos necesita acceso a tus fotos para que puedas subir las fotos de tu perfil."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
