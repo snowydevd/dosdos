@@ -36,7 +36,8 @@
         {
           "photosPermission": "DosDos necesita acceso a tus fotos para que puedas subir las fotos de tu perfil."
         }
-      ]
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true

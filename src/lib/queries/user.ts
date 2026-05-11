@@ -1,4 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import * as FileSystem from 'expo-file-system';
+import { decode } from 'base64-arraybuffer';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@/types';
 
@@ -62,13 +64,13 @@ export function useSubirFoto() {
       const extension = uri.split('.').pop() ?? 'jpg';
       const fileName = `${userId}/${Date.now()}.${extension}`;
 
-      // Convertir URI local a blob
-      const response = await fetch(uri);
-      const blob = await response.blob();
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
 
       const { error: uploadError } = await supabase.storage
         .from('fotos-perfil')
-        .upload(fileName, blob, { contentType: `image/${extension}` });
+        .upload(fileName, decode(base64), { contentType: `image/${extension}` });
 
       if (uploadError) throw uploadError;
 
