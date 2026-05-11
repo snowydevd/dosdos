@@ -12,11 +12,11 @@ create policy "usuarios pueden ver cualquier perfil"
 
 create policy "usuarios solo modifican su propio perfil"
   on users for update
-  using (auth.uid() = id);
+  using (auth.uid()::text = id);
 
 create policy "usuarios insertan su propio perfil"
   on users for insert
-  with check (auth.uid() = id);
+  with check (auth.uid()::text = id);
 
 -- ─── photos ──────────────────────────────────────────────────
 alter table photos enable row level security;
