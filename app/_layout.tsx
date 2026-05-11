@@ -19,10 +19,13 @@ export default function RootLayout() {
   const { setSession, setSupabaseUser, setIsLoading } = useAuthStore();
 
   useEffect(() => {
-    // Escuchar cambios de sesión de Supabase Auth
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'TOKEN_REFRESHED' && !session) {
+        await supabase.auth.signOut();
+        return;
+      }
       setSession(session);
       setSupabaseUser(session?.user ?? null);
       setIsLoading(false);
