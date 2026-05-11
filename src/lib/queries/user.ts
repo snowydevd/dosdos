@@ -64,13 +64,13 @@ export function useSubirFoto() {
       const extension = uri.split('.').pop() ?? 'jpg';
       const fileName = `${userId}/${Date.now()}.${extension}`;
 
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+      const response = await fetch(uri);
+      const arrayBuffer = await response.arrayBuffer();
 
       const { error: uploadError } = await supabase.storage
         .from('fotos-perfil')
-        .upload(fileName, decode(base64), { contentType: `image/${extension}` });
+        .upload(fileName, arrayBuffer, { contentType: `image/${extension}` });
+
 
       if (uploadError) throw uploadError;
 
