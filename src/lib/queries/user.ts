@@ -62,13 +62,12 @@ export function useSubirFoto() {
       const extension = uri.split('.').pop() ?? 'jpg';
       const fileName = `${userId}/${Date.now()}.${extension}`;
 
-      // Convertir URI local a blob
       const response = await fetch(uri);
-      const blob = await response.blob();
+      const arrayBuffer = await response.arrayBuffer();
 
       const { error: uploadError } = await supabase.storage
         .from('fotos-perfil')
-        .upload(fileName, blob, { contentType: `image/${extension}` });
+        .upload(fileName, arrayBuffer, { contentType: `image/${extension}` });
 
       if (uploadError) throw uploadError;
 
