@@ -37,7 +37,7 @@ export default function PerfilOnboardingScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: 'images',
       allowsEditing: true,
       aspect: [3, 4],
       quality: 0.8,
@@ -50,8 +50,8 @@ export default function PerfilOnboardingScreen() {
     try {
       const orden = (perfil?.fotos?.length ?? 0) + 1;
       await subirFoto.mutateAsync({ userId, uri: result.assets[0].uri, orden });
-    } catch {
-      Alert.alert('Error', 'No se pudo subir la foto. Intentá de nuevo.');
+    } catch (e: any) {
+      Alert.alert('Error', e?.message ?? 'No se pudo subir la foto. Intentá de nuevo.');
     } finally {
       setSubiendo(false);
     }

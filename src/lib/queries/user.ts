@@ -1,4 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import * as FileSystem from 'expo-file-system';
+import { decode } from 'base64-arraybuffer';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@/types';
 
@@ -68,6 +70,7 @@ export function useSubirFoto() {
       const { error: uploadError } = await supabase.storage
         .from('fotos-perfil')
         .upload(fileName, arrayBuffer, { contentType: `image/${extension}` });
+
 
       if (uploadError) throw uploadError;
 
