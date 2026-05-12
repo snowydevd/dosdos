@@ -4,26 +4,26 @@ import { View, ActivityIndicator } from 'react-native';
 import { useAuthStore } from '@/stores/auth';
 import { useMiPerfil } from '@/lib/queries/user';
 import { useMiDuo } from '@/lib/queries/duo';
+import { supabase } from '@/lib/supabase';
 
-/**
- * Punto de entrada — redirige según el estado de auth y onboarding.
- *
- * Flujo:
- *  1. Sin sesión → (auth)/login
- *  2. Con sesión pero sin perfil completo → (onboarding)/perfil
- *  3. Con perfil pero sin dúo activo → (onboarding)/linkear-duo
- *  4. Con todo completo → (tabs)/descubrir
- */
 export default function Index() {
   const { session, isLoading, setPerfil } = useAuthStore();
   const userId = session?.user?.id;
 
-  const { data: perfil, isLoading: perfilLoading } = useMiPerfil(userId);
+  const { data: perfil, isLoading: perfilLoading, isError: perfilError } = useMiPerfil(userId);
   const { data: duo, isLoading: duoLoading } = useMiDuo(userId);
 
   useEffect(() => {
     if (perfil) setPerfil(perfil);
   }, [perfil, setPerfil]);
+
+  // Registro incompleto: hay sesión pero no existe el registro en users.
+  // Limpiamos la sesión para que el usuario pueda volver a registrarse.
+  useEffect(() => {
+    if (session && !perfilLoading && perfilError) {
+      supabase.auth.signOut();
+    }
+  }, [session, perfilLoading, perfilError]);
 
   if (isLoading || perfilLoading || duoLoading) {
     return (

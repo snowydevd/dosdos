@@ -30,6 +30,7 @@ export function useRegister() {
       if (authError) throw authError;
       if (!authData.user) throw new Error('No se pudo crear el usuario');
 
+      const now = new Date().toISOString();
       const { error: profileError } = await supabase.from('users').insert({
         id: authData.user.id,
         email: data.email,
@@ -38,6 +39,7 @@ export function useRegister() {
         genero: data.genero,
         ciudad: data.ciudad,
         bio: data.bio ?? null,
+        updatedAt: now,
       });
 
       if (profileError) throw profileError;
